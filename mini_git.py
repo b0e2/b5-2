@@ -3,6 +3,31 @@
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Callable, TypeVar
+
+
+T = TypeVar("T")
+
+
+def merge_sort(items: list[T], key: Callable[[T], object]) -> list[T]:
+    """Return a stable sorted copy in O(n log n) time and O(n) space."""
+    if len(items) < 2:
+        return items[:]
+    middle = len(items) // 2
+    left = merge_sort(items[:middle], key)
+    right = merge_sort(items[middle:], key)
+    result: list[T] = []
+    i = j = 0
+    while i < len(left) and j < len(right):
+        if key(left[i]) <= key(right[j]):
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
 
 
 class MiniGitError(Exception):
@@ -28,12 +53,16 @@ class Repository:
         self.branches: dict[str, str | None] = {}
         self.current_branch = ""
         self.current_user = ""
+        self.keyword_index: dict[str, set[str]] = {}
+        self.author_index: dict[str, set[str]] = {}
 
     def init(self, user_name: str) -> None:
         """Start a new repository without reusing an earlier session ID."""
         if not user_name:
             raise MiniGitError("Invalid args")
         self.commits.clear()
+        self.keyword_index.clear()
+        self.author_index.clear()
         self.branches = {"main": None}
         self.current_branch = "main"
         self.current_user = user_name
@@ -74,6 +103,9 @@ class Repository:
         new_commit = Commit(commit_hash, message, self.current_user, datetime.now(), parents)
         self.commits[commit_hash] = new_commit
         self.branches[self.current_branch] = commit_hash
+        for token in set(message.lower().split()):
+            self.keyword_index.setdefault(token, set()).add(commit_hash)
+        self.author_index.setdefault(self.current_user, set()).add(commit_hash)
         return new_commit
 
     def commit(self, message: str) -> Commit:
@@ -89,9 +121,15 @@ class Repository:
             raise MiniGitError(f"Unknown commit: {commit_hash}")
         return self.commits[commit_hash]
 
-    def log(self) -> list[Commit]:
-        """Topologically list all commits with every parent before its child."""
+    def log(self, sort_by: str | None = None) -> list[Commit]:
+        """List parents first, or sort by date/author using merge sort."""
         self._require_init()
+        if sort_by == "date":
+            return merge_sort(list(self.commits.values()), lambda c: c.timestamp)
+        if sort_by == "author":
+            return merge_sort(list(self.commits.values()), lambda c: c.author)
+        if sort_by is not None:
+            raise MiniGitError("Invalid args")
         children: dict[str, list[str]] = {h: [] for h in self.commits}
         indegree = {h: len(commit.parents) for h, commit in self.commits.items()}
         for commit in self.commits.values():
@@ -154,3 +192,29 @@ class Repository:
             current = min(choices)
             route.append(current)
         return route
+
+    @staticmethod
+    def _contains_tokens(message: list[str], query: list[str]) -> bool:
+        return any(message[i:i + len(query)] == query
+                   for i in range(len(message) - len(query) + 1))
+
+    def search_keyword(self, keyword: str) -> list[Commit]:
+        """Intersect indexed tokens and check candidate phrases only."""
+        self._require_init()
+        tokens = keyword.lower().split()
+        if not tokens:
+            raise MiniGitError("Invalid args")
+        candidates = self.keyword_index.get(tokens[0], set()).copy()
+        for token in tokens[1:]:
+            candidates.intersection_update(self.keyword_index.get(token, set()))
+        hashes = merge_sort(list(candidates), lambda h: int(h, 16))
+        return [self.commits[h] for h in hashes
+                if self._contains_tokens(self.commits[h].message.lower().split(), tokens)]
+
+    def search_author(self, author: str) -> list[Commit]:
+        """Read the exact-author posting list without scanning commits."""
+        self._require_init()
+        if not author:
+            raise MiniGitError("Invalid args")
+        hashes = merge_sort(list(self.author_index.get(author, set())), lambda h: int(h, 16))
+        return [self.commits[h] for h in hashes]
