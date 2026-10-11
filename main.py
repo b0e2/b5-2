@@ -2,7 +2,13 @@
 
 import shlex
 
-from mini_git import MiniGitError, Repository
+from mini_git import Commit, MiniGitError, Repository
+
+
+def format_commit(commit: Commit) -> str:
+    """Show a commit's ID, author, time, and message."""
+    timestamp = commit.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    return f"commit {commit.hash} ({commit.author}, {timestamp})\n{commit.message}"
 
 
 class CommandError(Exception):
@@ -42,7 +48,19 @@ def run_command(line: str, repository: Repository | None = None) -> bool:
         commit = repository.commit(args[0])
         print(f"[{repository.current_branch} {commit.hash}] {commit.message}")
         return True
-    if command in {"INIT", "BRANCH", "SWITCH", "COMMIT"}:
+    if command == "LOG" and not args:
+        commits = repository.log()
+        print("\n".join(format_commit(commit) for commit in commits) or "No commits")
+        return True
+    if command == "ANCESTORS" and len(args) == 1:
+        commits = repository.ancestors(args[0])
+        print("\n".join(format_commit(commit) for commit in commits) or "No ancestors")
+        return True
+    if command == "PATH" and len(args) == 2:
+        route = repository.path(args[0], args[1])
+        print("Path: " + " -> ".join(route) if route is not None else "No path")
+        return True
+    if command in {"INIT", "BRANCH", "SWITCH", "COMMIT", "LOG", "ANCESTORS", "PATH"}:
         raise CommandError("Invalid args")
     raise CommandError(f"Unknown command: {parts[0]}")
 
