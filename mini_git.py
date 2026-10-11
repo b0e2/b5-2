@@ -30,6 +30,20 @@ def merge_sort(items: list[T], key: Callable[[T], object]) -> list[T]:
     return result
 
 
+def insertion_sort(items: list[T], key: Callable[[T], object]) -> list[T]:
+    """Return a stable sorted copy in O(n²) average/worst time."""
+    result = items[:]
+    for i in range(1, len(result)):
+        item = result[i]
+        item_key = key(item)
+        j = i - 1
+        while j >= 0 and key(result[j]) > item_key:
+            result[j + 1] = result[j]
+            j -= 1
+        result[j + 1] = item
+    return result
+
+
 class MiniGitError(Exception):
     """A repository error that can be shown to the user."""
 
