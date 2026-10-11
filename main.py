@@ -48,8 +48,13 @@ def run_command(line: str, repository: Repository | None = None) -> bool:
         commit = repository.commit(args[0])
         print(f"[{repository.current_branch} {commit.hash}] {commit.message}")
         return True
-    if command == "LOG" and not args:
-        commits = repository.log()
+    if command == "LOG":
+        if not args:
+            commits = repository.log()
+        elif len(args) == 1 and args[0] in ("--sort-by=date", "--sort-by=author"):
+            commits = repository.log(args[0].split("=", 1)[1])
+        else:
+            raise CommandError("Invalid args")
         print("\n".join(format_commit(commit) for commit in commits) or "No commits")
         return True
     if command == "ANCESTORS" and len(args) == 1:
@@ -60,7 +65,19 @@ def run_command(line: str, repository: Repository | None = None) -> bool:
         route = repository.path(args[0], args[1])
         print("Path: " + " -> ".join(route) if route is not None else "No path")
         return True
-    if command in {"INIT", "BRANCH", "SWITCH", "COMMIT", "LOG", "ANCESTORS", "PATH"}:
+    if command == "SEARCH" and len(args) == 1:
+        if args[0].startswith("--author="):
+            author = args[0][len("--author="):]
+            if not author:
+                raise CommandError("Invalid args")
+            commits = repository.search_author(author)
+        elif args[0].startswith("--"):
+            raise CommandError("Invalid args")
+        else:
+            commits = repository.search_keyword(args[0])
+        print("\n".join(f"- {commit.hash}: {commit.message}" for commit in commits) or "No commits found")
+        return True
+    if command in {"INIT", "BRANCH", "SWITCH", "COMMIT", "LOG", "ANCESTORS", "PATH", "SEARCH"}:
         raise CommandError("Invalid args")
     raise CommandError(f"Unknown command: {parts[0]}")
 
