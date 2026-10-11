@@ -6,6 +6,7 @@ from io import StringIO
 from unittest.mock import patch
 
 from main import CommandError, main, run_command
+from mini_git import MiniGitError, Repository
 
 
 class CommandTests(unittest.TestCase):
@@ -15,11 +16,18 @@ class CommandTests(unittest.TestCase):
         self.assertTrue(run_command("  "))
 
     def test_quoted_input_and_invalid_arguments(self) -> None:
-        with self.assertRaisesRegex(CommandError, "Unknown command: commit"):
-            run_command('commit "Add login feature"')
-        for text in ('commit "unfinished', "exit now", "quit extra"):
+        repository = Repository()
+        output = StringIO()
+        with redirect_stdout(output):
+            run_command('init "Alice Bob"', repository)
+            run_command('commit "Add login feature"', repository)
+        self.assertIn("Alice Bob", output.getvalue())
+        self.assertIn("Add login feature", output.getvalue())
+        for text in ('commit "unfinished', "exit now", "quit extra", "branch x y"):
             with self.subTest(text=text), self.assertRaisesRegex(CommandError, "Invalid args"):
-                run_command(text)
+                run_command(text, repository)
+        with self.assertRaisesRegex(MiniGitError, "Unknown branch: missing"):
+            run_command("switch missing", repository)
 
     def test_repl_recovers_from_errors_and_stops_on_eof(self) -> None:
         output = StringIO()
