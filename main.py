@@ -49,6 +49,10 @@ def run_command(line: str, repository: Repository | None = None) -> bool:
         commit = repository.commit(args[0])
         print(f"[{repository.current_branch} {commit.hash}] {commit.message}")
         return True
+    if command == "MERGE" and len(args) == 1:
+        commit = repository.merge(args[0])
+        print(f"[{repository.current_branch} {commit.hash}] {commit.message}")
+        return True
     if command == "LOG":
         if not args:
             commits = repository.log()
@@ -82,7 +86,7 @@ def run_command(line: str, repository: Repository | None = None) -> bool:
         changes = compare_files(args[0], args[1])
         print("\n".join(f"{kind} {line}" for kind, line in changes) or "No differences")
         return True
-    if command in {"INIT", "BRANCH", "SWITCH", "COMMIT", "LOG", "ANCESTORS", "PATH", "SEARCH", "DIFF"}:
+    if command in {"INIT", "BRANCH", "SWITCH", "COMMIT", "LOG", "ANCESTORS", "PATH", "SEARCH", "DIFF", "MERGE"}:
         raise CommandError("Invalid args")
     raise CommandError(f"Unknown command: {parts[0]}")
 
