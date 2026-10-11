@@ -115,6 +115,24 @@ class Repository:
         parents = () if head is None else (head,)
         return self._create_commit(message, parents)
 
+    def merge(self, branch_name: str) -> Commit:
+        """Create a metadata-only commit with current and target HEADs as parents."""
+        self._require_init()
+        if branch_name not in self.branches:
+            raise MiniGitError(f"Unknown branch: {branch_name}")
+        if branch_name == self.current_branch:
+            raise MiniGitError("Cannot merge a branch into itself")
+        current_head = self.branches[self.current_branch]
+        target_head = self.branches[branch_name]
+        if current_head is None or target_head is None:
+            raise MiniGitError("Cannot merge an empty branch")
+        if current_head == target_head:
+            raise MiniGitError("Branches already share the same HEAD")
+        return self._create_commit(
+            f"Merge branch '{branch_name}' into {self.current_branch}",
+            (current_head, target_head),
+        )
+
     def _get_commit(self, commit_hash: str) -> Commit:
         self._require_init()
         if commit_hash not in self.commits:

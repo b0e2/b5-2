@@ -18,6 +18,7 @@ mini-git> switch feature
 mini-git> commit "Add login feature"
 mini-git> switch main
 mini-git> commit "Add payment feature"
+mini-git> merge feature
 mini-git> log
 mini-git> log --sort-by=date
 mini-git> log --sort-by=author
@@ -34,7 +35,7 @@ mini-git> quit
 
 메시지 검색은 공백 단위 소문자 토큰의 역색인을 사용합니다. 공백이 있는 검색어는 연속된 토큰 구문으로 찾고, 작성자 검색은 이름이 정확히 일치해야 합니다. `init`을 다시 실행하면 현재 저장소 상태가 초기화됩니다.
 
-`diff`는 로컬 UTF-8 텍스트 파일 두 개의 줄을 비교해 공통(` `), 삭제(`-`), 추가(`+`)를 표시합니다. 파일 내용은 커밋에 저장하지 않습니다.
+`diff`는 로컬 UTF-8 텍스트 파일 두 개의 줄을 비교해 공통(` `), 삭제(`-`), 추가(`+`)를 표시합니다. `merge`는 현재 HEAD와 대상 브랜치 HEAD를 부모로 하는 새 커밋을 만듭니다. 둘 다 커밋이 있어야 하며 파일 내용이나 충돌을 병합하지는 않습니다.
 
 커밋 ID는 세션 내 고유한 증가 번호의 16진수 표현이며 실제 Git의 콘텐츠 해시는 아닙니다. 파일 내용 추적, 디스크 저장, 네트워크 통신은 지원하지 않습니다. 프로그램 종료 시 저장된 커밋은 사라집니다.
 
