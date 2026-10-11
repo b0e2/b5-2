@@ -2,6 +2,7 @@
 
 import shlex
 
+from line_diff import compare_files
 from mini_git import Commit, MiniGitError, Repository
 
 
@@ -77,7 +78,11 @@ def run_command(line: str, repository: Repository | None = None) -> bool:
             commits = repository.search_keyword(args[0])
         print("\n".join(f"- {commit.hash}: {commit.message}" for commit in commits) or "No commits found")
         return True
-    if command in {"INIT", "BRANCH", "SWITCH", "COMMIT", "LOG", "ANCESTORS", "PATH", "SEARCH"}:
+    if command == "DIFF" and len(args) == 2:
+        changes = compare_files(args[0], args[1])
+        print("\n".join(f"{kind} {line}" for kind, line in changes) or "No differences")
+        return True
+    if command in {"INIT", "BRANCH", "SWITCH", "COMMIT", "LOG", "ANCESTORS", "PATH", "SEARCH", "DIFF"}:
         raise CommandError("Invalid args")
     raise CommandError(f"Unknown command: {parts[0]}")
 
