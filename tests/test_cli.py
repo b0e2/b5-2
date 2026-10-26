@@ -41,6 +41,26 @@ class CommandTests(unittest.TestCase):
         with self.assertRaisesRegex(CommandError, "Unknown command: HeLp"):
             run_command("HeLp", repository)
 
+    def test_merge_command_and_arguments(self) -> None:
+        repository = Repository()
+        repository.init("Alice")
+        repository.commit("root")
+        repository.branch("feature")
+        repository.commit("main")
+        repository.switch("feature")
+        repository.commit("feature")
+        repository.switch("main")
+        output = StringIO()
+        with redirect_stdout(output):
+            run_command("merge feature", repository)
+        self.assertIn("Merge branch 'feature' into main", output.getvalue())
+        for text in ("merge", "merge feature extra"):
+            with self.subTest(text=text), self.assertRaisesRegex(
+                CommandError,
+                "Invalid args",
+            ):
+                run_command(text, repository)
+
     def test_repl_recovers_from_errors_and_stops_on_eof(self) -> None:
         output = StringIO()
         with patch("builtins.input", side_effect=["unknown", "quit extra", EOFError]), redirect_stdout(output):

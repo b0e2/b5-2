@@ -5,7 +5,7 @@ from contextlib import redirect_stdout
 from io import StringIO
 from unittest.mock import patch
 
-import benchmark_sort
+from benchmarks import sort_benchmark
 from mini_git import insertion_sort, merge_sort
 
 
@@ -21,9 +21,9 @@ class SortBenchmarkTests(unittest.TestCase):
 
     def test_benchmark_reports_same_sizes_and_complexities(self) -> None:
         output = StringIO()
-        with patch.object(benchmark_sort, "SIZES", (10, 20)), \
-                patch.object(benchmark_sort, "REPEATS", 2), redirect_stdout(output):
-            benchmark_sort.main()
+        with patch.object(sort_benchmark, "SIZES", (10, 20)), \
+                patch.object(sort_benchmark, "REPEATS", 2), redirect_stdout(output):
+            sort_benchmark.main()
         text = output.getvalue()
         self.assertIn("seed=42, repetitions=2", text)
         self.assertIn("  10", text)
@@ -42,13 +42,13 @@ class SortBenchmarkTests(unittest.TestCase):
             received.append(("insertion", items[:]))
             return insertion_sort(items, key)
 
-        with patch.object(benchmark_sort, "SIZES", (10,)), \
-                patch.object(benchmark_sort, "REPEATS", 1), \
-                patch.object(benchmark_sort, "merge_sort", record_merge), \
-                patch.object(benchmark_sort, "insertion_sort", record_insertion), \
-                patch("benchmark_sort.perf_counter", side_effect=range(20)), \
+        with patch.object(sort_benchmark, "SIZES", (10,)), \
+                patch.object(sort_benchmark, "REPEATS", 1), \
+                patch.object(sort_benchmark, "merge_sort", record_merge), \
+                patch.object(sort_benchmark, "insertion_sort", record_insertion), \
+                patch("benchmarks.sort_benchmark.perf_counter", side_effect=range(20)), \
                 redirect_stdout(StringIO()):
-            benchmark_sort.main()
+            sort_benchmark.main()
 
         merge_inputs = [items for name, items in received if name == "merge"]
         insertion_inputs = [items for name, items in received if name == "insertion"]

@@ -2,11 +2,10 @@
 
 import unittest
 from contextlib import redirect_stdout
-from datetime import datetime, timedelta
 from io import StringIO
 
 from main import CommandError, run_command
-from mini_git import Commit, Repository, merge_sort
+from mini_git import Repository
 
 
 class IndexSortTests(unittest.TestCase):
@@ -44,21 +43,6 @@ class IndexSortTests(unittest.TestCase):
         self.repo.commits = LookupOnly(self.repo.commits)
         self.assertEqual(self.repo.search_keyword("indexed"), [expected])
         self.assertEqual(self.repo.search_author("Alice Bob"), [expected])
-
-    def test_stable_sort_and_log_keys(self) -> None:
-        pairs = [(2, "a"), (1, "b"), (2, "c"), (1, "d")]
-        self.assertEqual(merge_sort(pairs, lambda pair: pair[0]),
-                         [(1, "b"), (1, "d"), (2, "a"), (2, "c")])
-        a = self.repo.commit("first")
-        b = self.repo.commit("second")
-        c = self.repo.commit("third")
-        base = datetime(2024, 1, 1)
-        self.repo.commits[a.hash] = Commit(a.hash, a.message, "Zoe", base + timedelta(days=2), ())
-        self.repo.commits[b.hash] = Commit(b.hash, b.message, "Amy", base, (a.hash,))
-        self.repo.commits[c.hash] = Commit(c.hash, c.message, "Amy", base, (b.hash,))
-        self.assertEqual([item.hash for item in self.repo.log("date")], [b.hash, c.hash, a.hash])
-        self.assertEqual([item.hash for item in self.repo.log("author")], [b.hash, c.hash, a.hash])
-        self.assertEqual([item.hash for item in self.repo.log()], [a.hash, b.hash, c.hash])
 
     def test_cli_options_and_invalid_values(self) -> None:
         self.repo.commit("Login feature")

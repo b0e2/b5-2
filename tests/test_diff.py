@@ -6,7 +6,7 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 
-from line_diff import compare_files, diff_lines
+from mini_git.algorithms.diff import compare_files, diff_lines
 from main import CommandError, run_command
 from mini_git import MiniGitError
 
