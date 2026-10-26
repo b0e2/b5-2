@@ -21,6 +21,12 @@ class LineDiffTests(unittest.TestCase):
         self.assertEqual(diff_lines(["removed"], []), [("-", "removed")])
         self.assertEqual(diff_lines([], []), [])
 
+    def test_lcs_tie_prefers_deletion(self) -> None:
+        self.assertEqual(
+            diff_lines(["a", "b"], ["b", "a"]),
+            [("-", "a"), (" ", "b"), ("+", "a")],
+        )
+
     def test_files_and_quoted_cli_paths(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             before = Path(folder) / "old notes.txt"
