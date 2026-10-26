@@ -2,10 +2,11 @@
 
 import unittest
 from contextlib import redirect_stdout
+from datetime import datetime, timedelta
 from io import StringIO
 
 from main import run_command
-from mini_git import MiniGitError, Repository
+from mini_git import Commit, MiniGitError, Repository
 
 
 class GraphTests(unittest.TestCase):
@@ -46,6 +47,45 @@ class GraphTests(unittest.TestCase):
             for parent in commit.parents:
                 self.assertLess(order[parent], order[commit.hash])
 
+    def test_log_sort_keys_and_parent_order(self) -> None:
+        first = self.repo.commit("first")
+        second = self.repo.commit("second")
+        third = self.repo.commit("third")
+        base = datetime(2024, 1, 1)
+        self.repo.commits[first.hash] = Commit(
+            first.hash,
+            first.message,
+            "Zoe",
+            base + timedelta(days=2),
+            (),
+        )
+        self.repo.commits[second.hash] = Commit(
+            second.hash,
+            second.message,
+            "Amy",
+            base,
+            (first.hash,),
+        )
+        self.repo.commits[third.hash] = Commit(
+            third.hash,
+            third.message,
+            "Amy",
+            base,
+            (second.hash,),
+        )
+        self.assertEqual(
+            [item.hash for item in self.repo.log("date")],
+            [second.hash, third.hash, first.hash],
+        )
+        self.assertEqual(
+            [item.hash for item in self.repo.log("author")],
+            [second.hash, third.hash, first.hash],
+        )
+        self.assertEqual(
+            [item.hash for item in self.repo.log()],
+            [first.hash, second.hash, third.hash],
+        )
+
     def test_no_path_and_unknown_hash(self) -> None:
         first = self.repo.commit("first root")
         other = self.repo._create_commit("other root", ())
@@ -54,6 +94,35 @@ class GraphTests(unittest.TestCase):
             self.repo.path("missing", first.hash)
         with self.assertRaisesRegex(MiniGitError, "Unknown commit: missing"):
             self.repo.ancestors("missing")
+
+    def test_merge_commit_graph_queries(self) -> None:
+        root = self.repo.commit("root")
+        self.repo.branch("feature")
+        main_head = self.repo.commit("main change")
+        self.repo.switch("feature")
+        feature_head = self.repo.commit("feature change")
+        self.repo.switch("main")
+        merged = self.repo.merge("feature")
+
+        self.assertEqual(merged.parents, (main_head.hash, feature_head.hash))
+        self.assertEqual(
+            {commit.hash for commit in self.repo.ancestors(merged.hash)},
+            {root.hash, main_head.hash, feature_head.hash},
+        )
+        self.assertEqual(
+            self.repo.path(main_head.hash, feature_head.hash),
+            [main_head.hash, root.hash, feature_head.hash],
+        )
+        self.assertEqual(
+            self.repo.path(feature_head.hash, merged.hash),
+            [feature_head.hash, merged.hash],
+        )
+        order = {
+            commit.hash: index
+            for index, commit in enumerate(self.repo.log())
+        }
+        self.assertLess(order[main_head.hash], order[merged.hash])
+        self.assertLess(order[feature_head.hash], order[merged.hash])
 
     def test_cli_outputs_and_argument_errors(self) -> None:
         root = self.repo.commit("root")

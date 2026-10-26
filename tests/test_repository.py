@@ -37,6 +37,44 @@ class RepositoryTests(unittest.TestCase):
         self.assertNotIn(root.hash, self.repo.commits)
         self.assertEqual(self.repo.branches, {"main": next_root.hash})
 
+    def test_merge_updates_only_current_branch(self) -> None:
+        root = self.repo.commit("root")
+        self.repo.branch("feature")
+        self.repo.commit("main change")
+        self.repo.switch("feature")
+        feature_head = self.repo.commit("feature change")
+        self.repo.switch("main")
+        merged = self.repo.merge("feature")
+
+        self.assertEqual(self.repo.branches["main"], merged.hash)
+        self.assertEqual(self.repo.branches["feature"], feature_head.hash)
+        self.assertEqual(
+            [commit.hash for commit in self.repo.search_keyword("merge")],
+            [merged.hash],
+        )
+        self.assertEqual(merged.parents[1], feature_head.hash)
+        self.assertNotEqual(merged.hash, root.hash)
+
+    def test_invalid_merge_targets_leave_state_unchanged(self) -> None:
+        with self.assertRaisesRegex(MiniGitError, "Unknown branch"):
+            self.repo.merge("missing")
+        with self.assertRaisesRegex(MiniGitError, "itself"):
+            self.repo.merge("main")
+        self.repo.branch("feature")
+        with self.assertRaisesRegex(MiniGitError, "empty branch"):
+            self.repo.merge("feature")
+        root = self.repo.commit("root")
+        with self.assertRaisesRegex(MiniGitError, "empty branch"):
+            self.repo.merge("feature")
+        self.repo.switch("feature")
+        self.repo.commit("feature root")
+        self.repo.switch("main")
+        self.repo.branch("same")
+        with self.assertRaisesRegex(MiniGitError, "same HEAD"):
+            self.repo.merge("same")
+        self.assertEqual(self.repo.branches["main"], root.hash)
+        self.assertEqual(len(self.repo.commits), 2)
+
     def test_errors_and_parent_validation(self) -> None:
         with self.assertRaisesRegex(MiniGitError, "Branch already exists: main"):
             self.repo.branch("main")
