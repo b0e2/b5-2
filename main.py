@@ -1,6 +1,7 @@
 """Command-line interface for Mini Git."""
 
 import shlex
+from typing import Optional
 
 from line_diff import compare_files
 from mini_git import Commit, MiniGitError, Repository
@@ -16,7 +17,7 @@ class CommandError(Exception):
     """An error that can be shown to the user."""
 
 
-def run_command(line: str, repository: Repository | None = None) -> bool:
+def run_command(line: str, repository: Optional[Repository] = None) -> bool:
     """Parse one command; return False to leave the REPL."""
     if repository is None:
         repository = Repository()
